@@ -1181,7 +1181,112 @@ ImprovedTube.toggleFitToWindow = function() {
 		document.querySelector("html").setAttribute("it-player-size", "fit_to_window");
 	}
 	window.dispatchEvent(new Event("resize"));
+};/*------------------------------------------------------------------------------
+CHANGE QUALITY MODE BUTTON (Dropdown)
+------------------------------------------------------------------------------*/
+ImprovedTube.playerQualityDropdown = function () {
+    if (!this.storage.player_change_quality_button) return;
+
+    const player = this.elements.player;
+    if (!player) return;
+
+    const addButton = () => {
+        const rightControls = player.querySelector('.ytp-right-controls');
+        if (!rightControls) {
+            requestAnimationFrame(addButton);
+            return;
+        }
+
+        // Prevent duplicates
+        if (player.querySelector('#it-player-change-quality-button')) return;
+
+        // Create button
+        const button = document.createElement('button');
+        button.id = 'it-player-change-quality-button';
+        button.className = 'ytp-button it-quality-button it-player-button';
+        button.title = 'Video Quality';
+        button.style.order = '100';
+
+        // SVG icon via TrustedHTML
+        let svgHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="#fff">
+            <path d="M7 10l5 5 5-5H7z"/>
+        </svg>`;
+        if (typeof trustedTypes !== 'undefined' && trustedTypes.createPolicy) {
+            const policy = trustedTypes.createPolicy('improvedtube', { createHTML: s => s });
+            button.innerHTML = policy.createHTML(svgHTML);
+        } else {
+            button.innerHTML = svgHTML;
+        }
+
+        // Text span
+        const span = document.createElement('span');
+        span.textContent = 'HD';
+        span.style.marginLeft = '4px';
+        span.style.color = '#fff';
+        button.appendChild(span);
+
+        rightControls.appendChild(button);
+
+        // Dropdown container
+        const menu = document.createElement('div');
+        menu.className = 'it-quality-menu';
+        menu.style.display = 'none';
+        document.body.appendChild(menu); // append to body for proper positioning
+
+        // Toggle dropdown
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+
+            const rect = button.getBoundingClientRect();
+            menu.style.position = 'absolute';
+            menu.style.top = rect.bottom + 'px';
+            menu.style.left = rect.left + 'px';
+            menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!menu.contains(event.target) && event.target !== button) {
+                menu.style.display = 'none';
+            }
+        });
+
+        // Populate menu
+        ImprovedTube.populateQualityMenu(menu, player, span);
+    };
+
+    addButton();
 };
+
+ImprovedTube.populateQualityMenu = function (menu, player, span) {
+    // Clear menu safely
+    if (typeof trustedTypes !== 'undefined' && trustedTypes.createPolicy) {
+        const policy = trustedTypes.createPolicy('improvedtube', { createHTML: s => s });
+        menu.innerHTML = policy.createHTML('');
+    } else {
+        menu.innerHTML = '';
+    }
+
+    const levels = player.getAvailableQualityLevels();
+
+    levels.forEach(level => {
+        const item = document.createElement('div');
+        item.className = 'it-quality-item';
+        item.textContent = level;
+
+        item.addEventListener('click', () => {
+            // Use the extension's existing playerQuality logic
+            ImprovedTube.playerQuality(level);
+
+            menu.style.display = 'none';
+            if (span) span.textContent = level;
+        });
+
+        menu.appendChild(item);
+    });
+};
+
+
 
 /*------------------------------------------------------------------------------
 CINEMA MODE BUTTON
